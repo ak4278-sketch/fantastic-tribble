@@ -1,0 +1,1609 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>四年級自然探險：水的奇妙世界 EduGem</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Canvas Confetti CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      transition: background-color 0.5s ease, color 0.5s ease;
+    }
+    .morandi-card {
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .morandi-card:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 18px -4px rgba(0, 0, 0, 0.08);
+    }
+    .morandi-card:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+    @keyframes pulse-combo {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.15); }
+    }
+    .combo-bounce {
+      animation: pulse-combo 0.4s ease-in-out;
+    }
+    /* 拖曳元素樣式 */
+    .draggable-chip {
+      cursor: grab;
+      touch-action: none;
+    }
+    .draggable-chip.dragging {
+      opacity: 0.5;
+      cursor: grabbing;
+    }
+    .dropzone {
+      transition: background-color 0.2s, border-color 0.2s;
+    }
+    .dropzone.drag-over {
+      background-color: rgba(142, 169, 144, 0.2) !important;
+      border-color: #6C826D !important;
+    }
+    /* 連連看連接線 SVG */
+    #connecting-svg {
+      pointer-events: none;
+    }
+    .connect-dot {
+      cursor: pointer;
+      transition: transform 0.2s, background-color 0.2s;
+    }
+    .connect-dot.selected {
+      transform: scale(1.3);
+      outline: 3px solid #758A7A;
+    }
+    /* 隱藏滾動條 */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="bg-[#F3EFEA] text-[#424647] min-h-screen flex flex-col justify-between selection:bg-[#B3C0A4] selection:text-white">
+
+  <!-- 頂部資訊列 (Header & HUD) -->
+  <header id="game-header" class="w-full bg-white/85 backdrop-blur-md border-b border-[#E0D7CC] sticky top-0 z-30 transition-all duration-300">
+    <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <span class="text-lg sm:text-xl font-bold tracking-tight text-[#4C5B50] flex items-center gap-1.5">
+          <svg class="w-6 h-6 text-[#6B8270]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+          <span class="hidden sm:inline">自然探險：</span>水的三態與生活
+        </span>
+        <span id="question-progress-badge" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-[#E5DFD4] text-[#59544C]">
+          第 1 / 25 題
+        </span>
+      </div>
+
+      <div class="flex items-center space-x-4">
+        <!-- 連擊 Combo -->
+        <div id="combo-container" class="hidden items-center text-xs font-bold px-2.5 py-1 rounded-full bg-[#E7BEA7]/30 text-[#9C543D] border border-[#E7BEA7]/60">
+          <span class="mr-1">🔥</span>
+          <span id="combo-count">0</span> 連擊!
+        </div>
+
+        <!-- 愛心 HP -->
+        <div class="flex items-center space-x-1" id="hp-container"></div>
+
+        <!-- 分數 Score -->
+        <div class="text-right">
+          <div class="text-[10px] text-[#8C8477] uppercase font-bold tracking-wider">總得分</div>
+          <div id="score-display" class="text-xl font-black text-[#526654] leading-none">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 倒數計時條 -->
+    <div class="w-full bg-[#E9E3D8] h-1.5 overflow-hidden">
+      <div id="timer-bar" class="h-full bg-[#7C937E] transition-all duration-100 ease-linear w-full"></div>
+    </div>
+  </header>
+
+  <!-- 主內容區塊 Container -->
+  <main class="max-w-3xl w-full mx-auto px-4 py-5 flex-grow flex flex-col justify-center">
+
+    <!-- 1. 開始畫面 -->
+    <section id="start-screen" class="bg-white/95 border border-[#E0D7CC] p-6 sm:p-10 rounded-2xl shadow-sm text-center">
+      <div class="w-20 h-20 mx-auto mb-4 rounded-2xl bg-[#E2EBE5] flex items-center justify-center text-[#556F5E] shadow-inner">
+        <svg class="w-10 h-10" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+      </div>
+      <h1 class="text-2xl sm:text-3xl font-extrabold text-[#3F4842] mb-2">四年級自然：水的奇妙世界</h1>
+      <p class="text-[#646A65] text-sm sm:text-base mb-6 max-w-lg mx-auto leading-relaxed">
+        新北市永定國小期中評量互動版：包含<strong>是非題、選擇題、拖曳分類、觸控連連看、連通管水面互動</strong>等多元題型！<br>
+        隨機抽取 <strong>25 題</strong>，每題 4 分，挑戰 <strong>100 分</strong> 滿分彩帶！
+      </p>
+
+      <!-- 題型特色卡片 -->
+      <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5 mb-8 text-center text-xs">
+        <div class="p-3 bg-[#F7F5F0] rounded-xl border border-[#E6E0D5]">
+          <span class="block font-bold text-[#556F5E] text-sm mb-1">⭕❌</span>
+          是非直覺作答
+        </div>
+        <div class="p-3 bg-[#F7F5F0] rounded-xl border border-[#E6E0D5]">
+          <span class="block font-bold text-[#6B7E91] text-sm mb-1">🔘 選擇</span>
+          觀念單選辨析
+        </div>
+        <div class="p-3 bg-[#F7F5F0] rounded-xl border border-[#E6E0D5]">
+          <span class="block font-bold text-[#A25B43] text-sm mb-1">📦 拖曳</span>
+          三態與實驗分類
+        </div>
+        <div class="p-3 bg-[#F7F5F0] rounded-xl border border-[#E6E0D5]">
+          <span class="block font-bold text-[#816B8A] text-sm mb-1">🔗 連連看</span>
+          生活原理點選配對
+        </div>
+        <div class="p-3 bg-[#F7F5F0] rounded-xl border border-[#E6E0D5] col-span-2 sm:col-span-1">
+          <span class="block font-bold text-[#5C7D73] text-sm mb-1">📏 水位畫線</span>
+          連通管高度模擬
+        </div>
+      </div>
+
+      <button id="btn-start" class="w-full sm:w-64 py-3.5 px-6 bg-[#677C6B] hover:bg-[#566A59] text-white font-bold rounded-xl shadow-md transition-all text-lg hover:shadow-lg active:scale-95">
+        開始闖關測驗
+      </button>
+    </section>
+
+    <!-- 2. 測驗互動核心區域 -->
+    <section id="quiz-screen" class="hidden flex-col">
+      <div id="question-card" class="bg-white/95 border border-[#E0D7CC] rounded-2xl p-5 sm:p-7 shadow-sm transition-all duration-300 relative">
+        
+        <!-- 題型標籤與題號 -->
+        <div class="flex items-center justify-between mb-3 text-xs">
+          <span id="question-type-tag" class="font-bold px-3 py-1 rounded-full bg-[#E5EDE7] text-[#486351]">
+            題型載入中
+          </span>
+          <span id="question-timer-label" class="text-[#847B6E] font-mono font-bold">剩餘 30 秒</span>
+        </div>
+
+        <!-- 題目內文 -->
+        <h2 id="question-title" class="text-base sm:text-lg font-bold text-[#353C37] mb-5 leading-relaxed">
+          題目加載中...
+        </h2>
+
+        <!-- 動態題目互動區域 (不同題型將動態注入此處) -->
+        <div id="interactive-content" class="mb-5 min-h-[160px]">
+          <!-- Dynamic Content -->
+        </div>
+
+        <!-- 即時解析回饋面板 -->
+        <div id="feedback-panel" class="hidden mt-5 p-4 rounded-xl border transition-all duration-300">
+          <div class="flex items-center space-x-2 font-bold mb-1.5 text-sm sm:text-base" id="feedback-status"></div>
+          <p id="feedback-explanation" class="text-xs sm:text-sm leading-relaxed text-[#525653]"></p>
+          <div class="mt-4 flex justify-end">
+            <button id="btn-next-question" class="py-2.5 px-6 bg-[#677C6B] hover:bg-[#566A59] text-white font-bold rounded-xl text-sm transition-all shadow-sm">
+              下一題 ➔
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 3. 結果結算畫面 -->
+    <section id="result-screen" class="hidden bg-white/95 border border-[#E0D7CC] rounded-2xl p-6 sm:p-10 shadow-sm text-center">
+      <div id="result-badge-icon" class="w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center text-3xl shadow-inner">🏆</div>
+      <h2 id="result-title" class="text-2xl sm:text-3xl font-extrabold text-[#353D37] mb-2">測驗完成！</h2>
+      <p id="result-subtitle" class="text-xs sm:text-sm text-[#6C716D] mb-6">本次闖關成果報告如下：</p>
+
+      <!-- 得分看板 -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-7">
+        <div class="p-3.5 bg-[#F8F7F3] rounded-xl border border-[#E6E0D5]">
+          <span class="block text-xs text-[#847D6F] font-medium">總得分</span>
+          <span id="final-score" class="text-2xl sm:text-3xl font-extrabold text-[#526654]">0</span>
+          <span class="text-xs text-[#847D6F]">/ 100 分</span>
+        </div>
+        <div class="p-3.5 bg-[#F8F7F3] rounded-xl border border-[#E6E0D5]">
+          <span class="block text-xs text-[#847D6F] font-medium">答對率</span>
+          <span id="final-accuracy" class="text-2xl sm:text-3xl font-extrabold text-[#486351]">0%</span>
+        </div>
+        <div class="p-3.5 bg-[#F8F7F3] rounded-xl border border-[#E6E0D5]">
+          <span class="block text-xs text-[#847D6F] font-medium">最高連擊</span>
+          <span id="final-max-combo" class="text-2xl sm:text-3xl font-extrabold text-[#9C543D]">0</span>
+        </div>
+        <div class="p-3.5 bg-[#F8F7F3] rounded-xl border border-[#E6E0D5]">
+          <span class="block text-xs text-[#847D6F] font-medium">作答用時</span>
+          <span id="final-duration" class="text-2xl sm:text-3xl font-extrabold text-[#5A697A]">0m</span>
+        </div>
+      </div>
+
+      <!-- 滿分橫幅 -->
+      <div id="perfect-banner" class="hidden mb-6 p-4 rounded-xl bg-[#E3EFE3] border border-[#B5CDB3] text-[#3A5737] font-bold text-sm">
+        🎉 太震撼了！榮獲 100 分滿分！全卷題目無懈可擊，你是真正的「小小水科學家」！
+      </div>
+
+      <div class="flex flex-col sm:flex-row gap-3 justify-center mb-8">
+        <button id="btn-restart" class="py-3 px-6 bg-[#677C6B] hover:bg-[#566A59] text-white font-bold rounded-xl transition-all shadow-sm">
+          🔄 重新挑戰隨機 25 題
+        </button>
+        <button id="btn-toggle-mistakes" class="py-3 px-6 bg-[#E9E3D8] hover:bg-[#DBD4C6] text-[#514A40] font-bold rounded-xl transition-all">
+          📑 查看作答解析詳情
+        </button>
+      </div>
+
+      <!-- 詳細題解列表 -->
+      <div id="review-container" class="text-left border-t border-[#E6E0D5] pt-6">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-bold text-[#3B423D] text-base">題目與解題複習檢視</h3>
+          <button id="filter-mistakes-only" class="text-xs px-3 py-1.5 rounded-lg border border-[#D5CCC0] bg-[#F5F2EB] hover:bg-[#E9E3D8] font-semibold text-[#5F584E]">
+            只顯示答錯的題目
+          </button>
+        </div>
+        <div id="review-list" class="space-y-3 max-h-96 overflow-y-auto pr-1 no-scrollbar"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="py-3 text-center text-xs text-[#999285] border-t border-[#E6E0D5] bg-white/60">
+    新北市石碇區永定國民小學 自然領域期中評量互動學習平台 &copy; EduGem
+  </footer>
+
+  <!-- 核心題目題庫與多元互動引擎 -->
+  <script>
+    /* =========================================================
+       1. 題庫資料 (包含 是非、選擇、拖曳分類、連連看、連通管水面互動)
+       ========================================================= */
+    const masterQuestionBank = [
+      // --- A. 是非題 (12題) ---
+      {
+        id: "TF-1",
+        type: "tf",
+        typeText: "是非題",
+        timeLimit: 30,
+        title: "將水滴在塑膠尺上，水會迅速被塑膠尺吸收並消失。",
+        correctAnswer: false,
+        explanation: "因為塑膠尺表面平滑且沒有毛細孔或細縫，水不會被吸收，而是會聚集在表面形成水滴。"
+      },
+      {
+        id: "TF-2",
+        type: "tf",
+        typeText: "是非題",
+        timeLimit: 30,
+        title: "與純水相比，含糖飲料需要更低的溫度才能凝固成冰。",
+        correctAnswer: true,
+        explanation: "水中溶有糖、鹽等溶質時，凝固點會下降，因此需要比純水（0℃）更低的溫度才會結冰。"
+      },
+      {
+        id: "TF-3",
+        type: "tf",
+        typeText: "是非題",
+        timeLimit: 30,
+        title: "水蒸氣是肉眼看得見的白色煙霧。",
+        correctAnswer: false,
+        explanation: "水蒸氣是無色、無味、肉眼看不見的氣體；我們看見的白煙其實是水蒸氣遇冷凝結成的微小水滴。"
+      },
+      {
+        id: "TF-4",
+        type: "tf",
+        typeText: "是非題",
+        timeLimit: 30,
+        title: "水在自然界中不斷透過蒸發、凝結、降水等過程循環不息。",
+        correctAnswer: true,
+        explanation: "地表水分受熱蒸發為水蒸氣，上升遇冷凝結成雲霧，最終以降雨或降雪落回地面，構成大自然的水循環。"
+      },
+      {
+        id: "TF-5",
+        type: "tf",
+        typeText: "是非題",
+        timeLimit: 30,
+        title: "水會因重力而從高處往低處流。",
+        correctAnswer: true,
+        explanation: "水受地球地心引力（重力）吸引，沒有外力阻擋時，自然會由地勢高處流往地勢低處。"
+      },
+      {
+        id: "TF-6",
+        type: "tf",
+        typeText: "是非題",
+        timeLimit: 30,
+        title: "曬衣服時，濕衣服變乾是因為衣服上的水「凝結」成了水蒸氣。",
+        correctAnswer: false,
+        explanation: "水變成水蒸氣的過程稱為「蒸發」，「凝結」是氣態水蒸氣遇冷變回液態水。"
+      },
+      {
+        id: "TF-7",
+        type: "tf",
+        typeText: "是非題",
+        timeLimit: 30,
+        title: "靜止時的水面，無論容器怎麼傾斜都會保持水平。",
+        correctAnswer: true,
+        explanation: "受地球引力作用，任何靜止液體的自由表面都會自然維持與地平面平行的水平面。"
+      },
+      {
+        id: "TF-8",
+        type: "tf",
+        typeText: "是非題",
+        timeLimit: 30,
+        title: "登山時，我們在山上遇到的白霧就是小水滴。",
+        correctAnswer: true,
+        explanation: "霧就是懸浮於接近地表空氣中的微細小水滴，是由水蒸氣遇冷凝結而成的。"
+      },
+      {
+        id: "TF-9",
+        type: "tf",
+        typeText: "是非題",
+        timeLimit: 30,
+        title: "馬桶可以沖走排泄物，是運用毛細現象的原理。",
+        correctAnswer: false,
+        explanation: "沖走排泄物是利用排污管落差產生的「虹吸現象」；底部彎曲水封才是利用「連通管原理」阻擋臭氣。"
+      },
+      {
+        id: "TF-10",
+        type: "tf",
+        typeText: "是非題",
+        timeLimit: 30,
+        title: "水在不同容器裡，因為連通管原理，所以水面高度都會相同。",
+        correctAnswer: false,
+        explanation: "必須是「底部相連通」的連通管容器，靜止水面高度才會相等；完全分開的獨立容器互不影響。"
+      },
+      {
+        id: "TF-11",
+        type: "tf",
+        typeText: "是非題",
+        timeLimit: 30,
+        title: "按壓式熱水瓶利用連通管原理，讓我們能在瓶身外就能查看水量。",
+        correctAnswer: true,
+        explanation: "熱水瓶內部儲水膽與外側透明水位計底部相連通，兩邊水位始終等高，屬於連通管原理應用。"
+      },
+      {
+        id: "TF-12",
+        type: "tf",
+        typeText: "是非題",
+        timeLimit: 30,
+        title: "小新在臺灣冬天時，把常溫水杯放在室外，杯壁會開始凝結小水滴。",
+        correctAnswer: false,
+        explanation: "水杯若是常溫，溫度並未明顯低於周遭環境，水蒸氣不會在此凝結；只有「冰水杯」杯壁才會凝結水滴。"
+      },
+
+      // --- B. 選擇題 (12題) ---
+      {
+        id: "MC-1",
+        type: "choice",
+        typeText: "單選題",
+        timeLimit: 30,
+        title: "下列哪一種現象與「毛細現象」無關？",
+        options: ["毛巾吸乾頭髮上的水", "毛筆沾墨汁寫字", "乒乓球浮在水面上", "珪藻土地墊上的腳印迅速變乾"],
+        correctAnswer: 2,
+        explanation: "乒乓球浮在水面上是運用「浮力原理」，其餘三者都是利用物體微小細縫吸水的「毛細現象」。"
+      },
+      {
+        id: "MC-2",
+        type: "choice",
+        typeText: "單選題",
+        timeLimit: 30,
+        title: "把大小相同的冰塊放入兩杯 100 毫升的水中，哪杯水中的冰塊融化得比較慢？",
+        options: ["冷水", "熱水", "一樣快", "無法判斷"],
+        correctAnswer: 0,
+        explanation: "熱水熱能較高，冰塊吸熱快因此融化快；冷水溫度低，冰塊吸熱慢，故融化比較慢。"
+      },
+      {
+        id: "MC-3",
+        type: "choice",
+        typeText: "單選題",
+        timeLimit: 30,
+        title: "當水放入冰箱，溫度恰好達到 0℃ 時，水會變成什麼狀態？",
+        options: ["只有液態的水", "只有氣態的水蒸氣", "只有固態的冰", "有液態的水及固態的冰同時存在"],
+        correctAnswer: 3,
+        explanation: "0℃ 是水的冰點也是融化點，在此平衡溫度下，冰與水可以共存。"
+      },
+      {
+        id: "MC-4",
+        type: "choice",
+        typeText: "單選題",
+        timeLimit: 30,
+        title: "下過雨的操場在經過一段時間後會變乾，這種現象稱為什麼？",
+        options: ["蒸發", "凝固", "昇華", "融化"],
+        correctAnswer: 0,
+        explanation: "地面的水吸收環境熱量，轉變為看不見的水蒸氣散逸到空氣中，這稱為蒸發。"
+      },
+      {
+        id: "MC-5",
+        type: "choice",
+        typeText: "單選題",
+        timeLimit: 30,
+        title: "戴眼鏡的小白從炎熱室外走進冷氣房，鏡片上突然出現一層白霧。關於這層白霧，哪個說法正確？",
+        options: [
+          "白霧是水蒸氣，是水變成的氣體",
+          "白霧是小水滴，是空氣中的水蒸氣遇冷凝結成的",
+          "白霧是水蒸氣，是眼鏡太熱冒出來的",
+          "白霧是小水滴，是冷氣吹出來的水"
+        ],
+        correctAnswer: 1,
+        explanation: "白霧看得見，是空氣中的水蒸氣在較冷的鏡片表面遇冷「凝結」成的微小水滴。"
+      },
+      {
+        id: "MC-6",
+        type: "choice",
+        typeText: "單選題",
+        timeLimit: 30,
+        title: "將膠水塗在紙上可以黏住物品，是因為膠水會滲入紙張的細縫中，這是運用了什麼特性？",
+        options: ["虹吸現象", "毛細現象", "凝結現象", "浮力現象"],
+        correctAnswer: 1,
+        explanation: "液體沿著紙張纖維間的細小孔隙滲透移動，屬於毛細現象。"
+      },
+      {
+        id: "MC-7",
+        type: "choice",
+        typeText: "單選題",
+        timeLimit: 30,
+        title: "下列哪一個組合屬於「氣態水蒸氣」的真實特徵？",
+        options: ["有固定形狀", "摸得到且有彈性", "白色且看得見", "無色、無味且肉眼看不見"],
+        correctAnswer: 3,
+        explanation: "水蒸氣是氣體狀態的水，無色、無味且肉眼無法看見。"
+      },
+      {
+        id: "MC-8",
+        type: "choice",
+        typeText: "單選題",
+        timeLimit: 30,
+        title: "剛從冰箱拿出來的冰棒，表面常會冒出白色煙霧，這些白煙是什麼？",
+        options: ["水蒸氣", "一氧化碳", "遇冷凝結的小水滴", "融化的糖水"],
+        correctAnswer: 2,
+        explanation: "冰棒周圍的空氣溫度極低，使周圍水蒸氣快速遇冷凝結成微小水滴懸浮空中，看起來像白煙。"
+      },
+      {
+        id: "MC-9",
+        type: "choice",
+        typeText: "單選題",
+        timeLimit: 30,
+        title: "妮妮將裝滿水的水瓶蓋緊放入冷凍庫，隔天發現水瓶膨脹變形了，這是因為水結成冰時：",
+        options: ["水的重量增加了", "水的體積變小了", "水的體積變大了", "水瓶內產生了大量氣體"],
+        correctAnswer: 2,
+        explanation: "大部分物質冷縮熱脹，但水在 0℃ 凝固結冰時，結構改變造成「體積膨脹變大」，因此會撐破或撐脹水瓶。"
+      },
+      {
+        id: "MC-10",
+        type: "choice",
+        typeText: "單選題",
+        timeLimit: 30,
+        title: "進行「虹吸現象」引水實驗時，塑膠管內必須保持什麼狀態，且出水口位置應如何擺放才能順利引水？",
+        options: [
+          "裝滿空氣，出水口高於裝水容器的水面",
+          "裝滿水，出水口低於裝水容器的水面",
+          "裝滿水，出水口高於裝水容器的水面",
+          "保持乾燥，出水口要完全堵住"
+        ],
+        correctAnswer: 1,
+        explanation: "虹吸現象成功要件：管內必須預先充滿水（排出空氣），且出水口必須低於容器液面以形成壓力差。"
+      },
+      {
+        id: "MC-11",
+        type: "choice",
+        typeText: "單選題",
+        timeLimit: 30,
+        title: "下列哪一項應用不是利用「水的三態變化」？",
+        options: ["水力發電", "蒸氣熨斗", "蒸小籠包", "煮水用笛音壺"],
+        correctAnswer: 0,
+        explanation: "水力發電是利用水的重力位能與流動動能發電，沒有狀態轉變；其餘皆運用水沸騰變水蒸氣。"
+      },
+      {
+        id: "MC-12",
+        type: "choice",
+        typeText: "單選題",
+        timeLimit: 30,
+        title: "用冰袋冰敷會感覺涼涼的，是因為冰塊融化時會：",
+        options: ["製造冷空氣", "心理作用", "放出熱量", "吸收熱量"],
+        correctAnswer: 3,
+        explanation: "固態冰融化成水需要從周圍環境吸收大量熱量（吸熱），因此皮膚會感到冰涼降溫。"
+      },
+
+      // --- C. 配對拖曳題 (Drag-and-Drop Matching) (3題) ---
+      {
+        id: "DRAG-1",
+        type: "drag-match",
+        typeText: "配對拖曳題",
+        timeLimit: 50,
+        title: "【水的三態變化】請將下列「變化的過程描述」，拖曳歸類到正確的「變化名稱」框中：",
+        categories: [
+          { key: "freeze", title: "凝固 (Freezing)" },
+          { key: "melt", title: "融化 (Melting)" },
+          { key: "condense", title: "凝結 (Condensation)" },
+          { key: "evaporate", title: "蒸發 (Evaporation)" }
+        ],
+        items: [
+          { id: "i1", text: "液態水變成固態冰", matchKey: "freeze" },
+          { id: "i2", text: "固態冰塊變成水", matchKey: "melt" },
+          { id: "i3", text: "氣態水蒸氣變水滴", matchKey: "condense" },
+          { id: "i4", text: "液態水變為水蒸氣", matchKey: "evaporate" }
+        ],
+        explanation: "水由液體變固體為【凝固】；固體變液體為【融化】；氣體變液體為【凝結】；液體變氣體為【蒸發】。"
+      },
+      {
+        id: "DRAG-2",
+        type: "drag-classify",
+        typeText: "形態分類拖曳",
+        timeLimit: 50,
+        title: "【自然界的水】請將下方的水產物，拖曳分類到「固態」、「液態」與「氣態」三個收集箱：",
+        categories: [
+          { key: "solid", title: "固態水 ❄️" },
+          { key: "liquid", title: "液態水 💧" },
+          { key: "gas", title: "氣態水 🌫️" }
+        ],
+        items: [
+          { id: "c1", text: "冰川", matchKey: "solid" },
+          { id: "c2", text: "雪花", matchKey: "solid" },
+          { id: "c3", text: "雨水", matchKey: "liquid" },
+          { id: "c4", text: "白開水", matchKey: "liquid" },
+          { id: "c5", text: "水蒸氣", matchKey: "gas" }
+        ],
+        explanation: "冰川與雪屬於【固態】；雨水與白開水屬於【液態】；肉眼看不見的水蒸氣屬於【氣態】。"
+      },
+      {
+        id: "DRAG-3",
+        type: "drag-select",
+        typeText: "實驗材料挑選",
+        timeLimit: 45,
+        title: "【飲料冰沙實驗】自製養樂多冰沙時，請拖曳選出進行冷劑實驗所需的「3 種必備材料」放進實驗籃中：",
+        targetCount: 3,
+        options: [
+          { id: "m1", text: "🧊 冰塊", isCorrect: true },
+          { id: "m2", text: "🧂 食鹽", isCorrect: true },
+          { id: "m3", text: "🧃 養樂多", isCorrect: true },
+          { id: "m4", text: "🍬 白砂糖", isCorrect: false },
+          { id: "m5", text: "🌶️ 辣椒粉", isCorrect: false },
+          { id: "m6", text: "🧪 肥皂水", isCorrect: false }
+        ],
+        explanation: "冰沙實驗三元素為：【冰塊】、【食鹽】（與冰塊混合製造 -21℃ 冷劑）以及被冷凍的飲品【養樂多】。"
+      },
+
+      // --- D. 連連看互動題 (Line Connecting) (2題) ---
+      {
+        id: "CONNECT-1",
+        type: "line-connect",
+        typeText: "連連看題",
+        timeLimit: 60,
+        title: "【連連看】請將日常生活的例子（左）與其應用的科學原理（右）連線配對：",
+        leftItems: [
+          { id: "L1", text: "蠟燭的燭芯吸蠟油", targetPrinciple: "P1" },
+          { id: "L2", text: "大樓頂樓水塔供水", targetPrinciple: "P2" },
+          { id: "L3", text: "馬桶沖水排污", targetPrinciple: "P3" },
+          { id: "L4", text: "棉繩自動澆花器", targetPrinciple: "P1" },
+          { id: "L5", text: "傳統熱水瓶看水位", targetPrinciple: "P2" },
+          { id: "L6", text: "水管替水族箱換水", targetPrinciple: "P3" }
+        ],
+        rightItems: [
+          { id: "P1", text: "● 毛細現象" },
+          { id: "P2", text: "● 連通管原理" },
+          { id: "P3", text: "● 虹吸現象" }
+        ],
+        explanation: "蠟燭燭芯與自動澆花器是【毛細現象】；大樓水塔與熱水瓶水位是【連通管原理】；馬桶沖水排污與魚缸換水是【虹吸現象】。"
+      },
+      {
+        id: "CONNECT-2",
+        type: "line-connect",
+        typeText: "連連看題",
+        timeLimit: 50,
+        title: "【連連看進階】請將常見的水生活現象與背後的主要成因連線：",
+        leftItems: [
+          { id: "L21", text: "乾冰周圍冒白煙", targetPrinciple: "RP1" },
+          { id: "L22", text: "濕抹布掛在陽台變乾", targetPrinciple: "RP2" },
+          { id: "L23", text: "水裝滿放冷凍庫結冰變硬", targetPrinciple: "RP3" }
+        ],
+        rightItems: [
+          { id: "RP1", text: "● 水蒸氣遇冷「凝結」成小水滴" },
+          { id: "RP2", text: "● 水分吸熱「蒸發」" },
+          { id: "RP3", text: "● 水降溫至0℃以下「凝固」" }
+        ],
+        explanation: "白煙是小水滴（凝結）；衣服抹布乾是水分蒸發；水結成冰是凝固作用。"
+      },
+
+      // --- E. 連通管原理畫水面 / 互動高度調整題 (3題) ---
+      {
+        id: "WATER-1",
+        type: "water-level",
+        typeText: "連通管水面互動",
+        timeLimit: 40,
+        title: "【連通管原理 (1)】圖中左右兩支注射筒底部相通。容器A的水位在刻度 40% 處，請滑動或點選調整容器B的水位，使其達到靜止平衡時的正確高度！",
+        vesselA_level: 40,
+        target_level: 40, // 必須等高
+        tolerance: 4,     // 允許正負誤差 4%
+        descriptionA: "容器 A (左側)",
+        descriptionB: "容器 B (右側，請滑動調整)",
+        explanation: "根據連通管原理，底部相連通的容器，在靜止平衡時兩側液面必須處於「同一水平面」（同為 40% 高度）！"
+      },
+      {
+        id: "WATER-2",
+        type: "water-level",
+        typeText: "連通管水面互動",
+        timeLimit: 40,
+        title: "【連通管原理 (2)】南瓜造型大水壺（容器A）與細長量筒（容器B）底部以軟管相連。水壺水位在刻度 60%，請將量筒B的水位調整到靜止時的正確位置：",
+        vesselA_level: 60,
+        target_level: 60,
+        tolerance: 4,
+        descriptionA: "南瓜大容器 A",
+        descriptionB: "細長量筒 B (請調節高度)",
+        explanation: "連通管中水面高度與容器外觀胖瘦、形狀完全無關！靜止時水面絕對高度必然等高（同為 60%）。"
+      },
+      {
+        id: "WATER-3",
+        type: "water-level",
+        typeText: "連通管水面互動",
+        timeLimit: 40,
+        title: "【連通管原理 (3)】異形多管連通管（直管、球型管、波浪管、斜管相連）。已知最左管注入水至 50% 刻度，請問右側管內水面應在何處？",
+        vesselA_level: 50,
+        target_level: 50,
+        tolerance: 4,
+        descriptionA: "基準管 A (50%)",
+        descriptionB: "波浪斜管 (請拉到平衡位置)",
+        explanation: "不論管子是垂直、傾斜還是彎曲波浪形，底部相通的同一液體靜止時，所有管子的水面都會維持在同一水平線上！"
+      }
+    ];
+
+    /* =========================================================
+       2. 莫蘭迪色系主題配置
+       ========================================================= */
+    const morandiThemes = [
+      { bg: "#F3EFEA", cardBg: "#FFFFFF", primary: "#677C6B", text: "#3D483F", border: "#D8CEBF", badge: "#E3EAE4" }, // 鼠尾草綠
+      { bg: "#F5F0EB", cardBg: "#FFFFFF", primary: "#997365", text: "#483731", border: "#E2D3CA", badge: "#EFE2DC" }, // 暖陶砂
+      { bg: "#EFF3F5", cardBg: "#FFFFFF", primary: "#5B7485", text: "#35434D", border: "#CEDBE2", badge: "#DFE8ED" }, // 莫蘭迪灰藍
+      { bg: "#F4F2EC", cardBg: "#FFFFFF", primary: "#7D7465", text: "#443F37", border: "#DFD7CA", badge: "#ECE7DE" }, // 燕麥亞麻
+      { bg: "#F5EFF1", cardBg: "#FFFFFF", primary: "#8A6B74", text: "#4A363D", border: "#E2D1D6", badge: "#ECE0E4" }  // 煙燻粉紫
+    ];
+
+    /* =========================================================
+       3. 遊戲核心狀態 (State Management)
+       ========================================================= */
+    let currentQuestions = [];
+    let currentIndex = 0;
+    let score = 0;
+    let hp = 5;
+    const MAX_HP = 5;
+    let currentCombo = 0;
+    let maxCombo = 0;
+    let timer = null;
+    let timeLeft = 30;
+    let startTime = null;
+    let userAnswersLog = [];
+    let isAnswered = false;
+
+    // 拖曳題暫存狀態
+    let dragUserState = {};
+    // 連連看暫存連線狀態
+    let connectUserLines = [];
+    let connectSelectedLeft = null;
+    // 水位滑桿暫存高度
+    let currentWaterB = 20;
+
+    // DOM 元素快取
+    const elStartScreen = document.getElementById('start-screen');
+    const elQuizScreen = document.getElementById('quiz-screen');
+    const elResultScreen = document.getElementById('result-screen');
+    const elBtnStart = document.getElementById('btn-start');
+    const elQuestionProgress = document.getElementById('question-progress-badge');
+    const elHpContainer = document.getElementById('hp-container');
+    const elScoreDisplay = document.getElementById('score-display');
+    const elComboContainer = document.getElementById('combo-container');
+    const elComboCount = document.getElementById('combo-count');
+    const elTimerBar = document.getElementById('timer-bar');
+    const elQuestionTimerLabel = document.getElementById('question-timer-label');
+    const elQuestionTypeTag = document.getElementById('question-type-tag');
+    const elQuestionTitle = document.getElementById('question-title');
+    const elInteractiveContent = document.getElementById('interactive-content');
+    const elFeedbackPanel = document.getElementById('feedback-panel');
+    const elFeedbackStatus = document.getElementById('feedback-status');
+    const elFeedbackExplanation = document.getElementById('feedback-explanation');
+    const elBtnNext = document.getElementById('btn-next-question');
+    const elBtnRestart = document.getElementById('btn-restart');
+    const elBtnToggleMistakes = document.getElementById('btn-toggle-mistakes');
+    const elReviewContainer = document.getElementById('review-container');
+    const elReviewList = document.getElementById('review-list');
+    const elFilterMistakesOnly = document.getElementById('filter-mistakes-only');
+    const elPerfectBanner = document.getElementById('perfect-banner');
+
+    /* =========================================================
+       4. Web Audio API 音效合成引擎
+       ========================================================= */
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playSound(type) {
+      if (!audioCtx) return;
+      try {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        if (type === 'correct') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(523.25, now);
+          osc.frequency.exponentialRampToValueAtTime(783.99, now + 0.14);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+          osc.start(now);
+          osc.stop(now + 0.25);
+        } else if (type === 'wrong') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(260, now);
+          osc.frequency.exponentialRampToValueAtTime(130, now + 0.25);
+          gain.gain.setValueAtTime(0.18, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+          osc.start(now);
+          osc.stop(now + 0.3);
+        } else if (type === 'click') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(600, now);
+          gain.gain.setValueAtTime(0.08, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+          osc.start(now);
+          osc.stop(now + 0.06);
+        } else if (type === 'celebrate') {
+          [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
+            const o = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            o.connect(g);
+            g.connect(audioCtx.destination);
+            o.frequency.setValueAtTime(f, now + i * 0.09);
+            g.gain.setValueAtTime(0.16, now + i * 0.09);
+            g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.09 + 0.4);
+            o.start(now + i * 0.09);
+            o.stop(now + i * 0.09 + 0.4);
+          });
+        }
+      } catch (e) {}
+    }
+
+    /* =========================================================
+       5. 莫蘭迪動態換色
+       ========================================================= */
+    function applyMorandiTheme(index) {
+      const theme = morandiThemes[index % morandiThemes.length];
+      document.body.style.backgroundColor = theme.bg;
+      document.getElementById('question-card').style.borderColor = theme.border;
+      elTimerBar.style.backgroundColor = theme.primary;
+      elBtnStart.style.backgroundColor = theme.primary;
+      elBtnNext.style.backgroundColor = theme.primary;
+      elBtnRestart.style.backgroundColor = theme.primary;
+    }
+
+    /* =========================================================
+       6. 遊戲流程運作
+       ========================================================= */
+    function initGame() {
+      // 隨機抽 25 題
+      const shuffled = [...masterQuestionBank].sort(() => 0.5 - Math.random());
+      currentQuestions = shuffled.slice(0, 25);
+
+      currentIndex = 0;
+      score = 0;
+      hp = MAX_HP;
+      currentCombo = 0;
+      maxCombo = 0;
+      userAnswersLog = [];
+      startTime = Date.now();
+
+      updateHpDisplay();
+      updateScoreDisplay();
+      elComboContainer.classList.add('hidden');
+
+      elStartScreen.classList.add('hidden');
+      elResultScreen.classList.add('hidden');
+      elQuizScreen.classList.remove('hidden');
+      elQuizScreen.classList.add('flex');
+
+      loadQuestion(currentIndex);
+    }
+
+    function updateHpDisplay() {
+      elHpContainer.innerHTML = '';
+      for (let i = 0; i < MAX_HP; i++) {
+        const span = document.createElement('span');
+        span.className = `text-base sm:text-lg transition-transform ${i < hp ? 'text-[#C76767] scale-100' : 'text-[#D0C9BE] opacity-35 scale-90'}`;
+        span.textContent = '❤️';
+        elHpContainer.appendChild(span);
+      }
+    }
+
+    function updateScoreDisplay() {
+      elScoreDisplay.textContent = score;
+    }
+
+    function updateCombo(isCorrect) {
+      if (isCorrect) {
+        currentCombo++;
+        if (currentCombo > maxCombo) maxCombo = currentCombo;
+        if (currentCombo >= 2) {
+          elComboContainer.classList.remove('hidden');
+          elComboContainer.classList.add('flex');
+          elComboCount.textContent = currentCombo;
+          elComboContainer.classList.add('combo-bounce');
+          setTimeout(() => elComboContainer.classList.remove('combo-bounce'), 400);
+        }
+      } else {
+        currentCombo = 0;
+        elComboContainer.classList.add('hidden');
+        elComboContainer.classList.remove('flex');
+      }
+    }
+
+    /* =========================================================
+       7. 題目加載與多元題型分流
+       ========================================================= */
+    function loadQuestion(index) {
+      isAnswered = false;
+      const q = currentQuestions[index];
+      applyMorandiTheme(index);
+
+      elQuestionProgress.textContent = `第 ${index + 1} / 25 題`;
+      elQuestionTypeTag.textContent = q.typeText;
+      elQuestionTitle.textContent = q.title;
+
+      // 隱藏解析面板
+      elFeedbackPanel.classList.add('hidden');
+      elFeedbackPanel.className = "hidden mt-5 p-4 rounded-xl border transition-all duration-300";
+
+      // 清空互動區
+      elInteractiveContent.innerHTML = '';
+
+      // 分流題型
+      if (q.type === 'tf') {
+        renderTrueFalse(q);
+      } else if (q.type === 'choice') {
+        renderMultipleChoice(q);
+      } else if (q.type === 'drag-match' || q.type === 'drag-classify') {
+        renderDragMatching(q);
+      } else if (q.type === 'drag-select') {
+        renderDragSelect(q);
+      } else if (q.type === 'line-connect') {
+        renderLineConnecting(q);
+      } else if (q.type === 'water-level') {
+        renderWaterLevelInteractive(q);
+      }
+
+      startTimer(q.timeLimit || 30);
+    }
+
+    function startTimer(seconds) {
+      clearInterval(timer);
+      timeLeft = seconds;
+      const total = seconds;
+      updateTimerUI(timeLeft, total);
+
+      timer = setInterval(() => {
+        timeLeft--;
+        updateTimerUI(timeLeft, total);
+        if (timeLeft <= 0) {
+          clearInterval(timer);
+          evaluateTimeout();
+        }
+      }, 1000);
+    }
+
+    function updateTimerUI(left, total) {
+      elQuestionTimerLabel.textContent = `剩餘 ${left} 秒`;
+      const pct = (left / total) * 100;
+      elTimerBar.style.width = `${pct}%`;
+      if (left <= 6) {
+        elTimerBar.style.backgroundColor = '#C76767';
+      } else {
+        elTimerBar.style.backgroundColor = morandiThemes[currentIndex % morandiThemes.length].primary;
+      }
+    }
+
+    function evaluateTimeout() {
+      if (isAnswered) return;
+      isAnswered = true;
+      const q = currentQuestions[currentIndex];
+      handleEvaluationResult(false, "【時間到！】超時未作答。", "超時未作答");
+    }
+
+    /* =========================================================
+       8. 具體題型渲染邏輯
+       ========================================================= */
+
+    // --- 題型 1: 是非題 ---
+    function renderTrueFalse(q) {
+      const wrap = document.createElement('div');
+      wrap.className = "grid grid-cols-2 gap-4 my-2";
+
+      const btnT = document.createElement('button');
+      btnT.className = "morandi-card flex flex-col items-center justify-center p-5 bg-[#F6F8F5] border-2 border-[#DCE4DA] hover:border-[#7C937E] rounded-2xl active:scale-95 transition-all text-[#485C48]";
+      btnT.innerHTML = `<span class="text-4xl sm:text-5xl font-black mb-1">⭕</span><span class="font-bold text-base sm:text-lg">正確 (是)</span>`;
+      btnT.onclick = () => {
+        playSound('click');
+        submitAnswer(true === q.correctAnswer, true ? "⭕ 正確" : "❌ 錯誤");
+      };
+
+      const btnF = document.createElement('button');
+      btnF.className = "morandi-card flex flex-col items-center justify-center p-5 bg-[#FBF5F4] border-2 border-[#EADBD8] hover:border-[#B37B75] rounded-2xl active:scale-95 transition-all text-[#734A47]";
+      btnF.innerHTML = `<span class="text-4xl sm:text-5xl font-black mb-1">❌</span><span class="font-bold text-base sm:text-lg">錯誤 (非)</span>`;
+      btnF.onclick = () => {
+        playSound('click');
+        submitAnswer(false === q.correctAnswer, false ? "⭕ 正確" : "❌ 錯誤");
+      };
+
+      wrap.appendChild(btnT);
+      wrap.appendChild(btnF);
+      elInteractiveContent.appendChild(wrap);
+    }
+
+    // --- 題型 2: 單選題 ---
+    function renderMultipleChoice(q) {
+      const box = document.createElement('div');
+      box.className = "space-y-2.5";
+
+      q.options.forEach((optText, idx) => {
+        const btn = document.createElement('button');
+        btn.className = "morandi-card w-full text-left p-3.5 sm:p-4 rounded-xl border border-[#DED6CA] bg-[#FAF8F5] hover:bg-[#F2ECE1] transition-all flex items-start space-x-3 text-[#45423B]";
+        btn.innerHTML = `
+          <span class="flex-shrink-0 w-6 h-6 rounded-full bg-[#E5DEC3]/50 text-[#716752] font-bold text-xs flex items-center justify-center mt-0.5 border border-[#D5CBB9]">
+            ${String.fromCharCode(65 + idx)}
+          </span>
+          <span class="text-sm sm:text-base font-medium leading-relaxed">${optText}</span>
+        `;
+        btn.onclick = () => {
+          playSound('click');
+          const isCorrect = (idx === q.correctAnswer);
+          const chosenText = `${String.fromCharCode(65 + idx)}. ${optText}`;
+          submitAnswer(isCorrect, chosenText);
+        };
+        box.appendChild(btn);
+      });
+
+      elInteractiveContent.appendChild(box);
+    }
+
+    // --- 題型 3: 配對拖曳題 (水的三態與形態分類) ---
+    function renderDragMatching(q) {
+      dragUserState = {};
+      const wrap = document.createElement('div');
+      wrap.className = "flex flex-col gap-4";
+
+      // 1. 可拖曳物料區
+      const itemsContainer = document.createElement('div');
+      itemsContainer.className = "flex flex-wrap gap-2 p-3 bg-[#FAF8F4] rounded-xl border border-dashed border-[#D6CDBC] min-h-[58px] items-center";
+      itemsContainer.id = "drag-source-container";
+
+      // 2. 放置區分類箱
+      const dropzonesContainer = document.createElement('div');
+      dropzonesContainer.className = `grid grid-cols-1 sm:grid-cols-${q.categories.length} gap-3`;
+
+      q.categories.forEach(cat => {
+        dragUserState[cat.key] = [];
+        const zone = document.createElement('div');
+        zone.className = "dropzone p-3 bg-white rounded-xl border-2 border-[#DCD3C5] flex flex-col min-h-[110px]";
+        zone.dataset.category = cat.key;
+        zone.innerHTML = `
+          <div class="text-xs font-bold text-[#645E54] border-b border-[#ECE4D8] pb-1.5 mb-2 flex items-center justify-between">
+            <span>${cat.title}</span>
+            <span class="text-[10px] text-[#A39A8B] count-hint">0 項</span>
+          </div>
+          <div class="zone-chips flex flex-wrap gap-1.5 flex-grow items-start content-start"></div>
+        `;
+
+        // 桌面 HTML5 Drag & Drop
+        zone.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          zone.classList.add('drag-over');
+        });
+        zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+        zone.addEventListener('drop', (e) => {
+          e.preventDefault();
+          zone.classList.remove('drag-over');
+          const itemId = e.dataTransfer.getData('text/plain');
+          moveItemToCategory(itemId, cat.key, q);
+        });
+
+        // 手機觸控點選支援：先點選卡片，再點選分類箱直接放入
+        zone.addEventListener('click', () => {
+          const selected = document.querySelector('.draggable-chip.selected-for-move');
+          if (selected) {
+            moveItemToCategory(selected.dataset.id, cat.key, q);
+            selected.classList.remove('selected-for-move', 'ring-2', 'ring-[#677C6B]');
+          }
+        });
+
+        dropzonesContainer.appendChild(zone);
+      });
+
+      // 渲染拖曳小卡片
+      q.items.forEach(item => {
+        const chip = document.createElement('div');
+        chip.id = `chip-${item.id}`;
+        chip.dataset.id = item.id;
+        chip.draggable = true;
+        chip.className = "draggable-chip px-3 py-1.5 rounded-lg bg-[#EAE3D5] text-[#474136] text-xs font-semibold shadow-sm border border-[#D5CABB] flex items-center gap-1 active:scale-95 transition-transform cursor-pointer";
+        chip.innerHTML = `<span>✥</span><span>${item.text}</span>`;
+
+        chip.addEventListener('dragstart', (e) => {
+          e.dataTransfer.setData('text/plain', item.id);
+          chip.classList.add('dragging');
+        });
+        chip.addEventListener('dragend', () => chip.classList.remove('dragging'));
+
+        // 觸控點選模式
+        chip.addEventListener('click', (e) => {
+          e.stopPropagation();
+          playSound('click');
+          document.querySelectorAll('.draggable-chip').forEach(c => c.classList.remove('selected-for-move', 'ring-2', 'ring-[#677C6B]'));
+          chip.classList.add('selected-for-move', 'ring-2', 'ring-[#677C6B]');
+        });
+
+        itemsContainer.appendChild(chip);
+      });
+
+      // 提交按鈕
+      const submitBtn = document.createElement('button');
+      submitBtn.className = "mt-2 w-full py-2.5 bg-[#677C6B] hover:bg-[#566A59] text-white font-bold rounded-xl text-sm transition-all";
+      submitBtn.textContent = "確認分類完成 ✓";
+      submitBtn.onclick = () => {
+        playSound('click');
+        evaluateDragMatching(q);
+      };
+
+      wrap.appendChild(itemsContainer);
+      wrap.appendChild(dropzonesContainer);
+      wrap.appendChild(submitBtn);
+      elInteractiveContent.appendChild(wrap);
+    }
+
+    function moveItemToCategory(itemId, catKey, q) {
+      playSound('click');
+      const chip = document.getElementById(`chip-${itemId}`);
+      if (!chip) return;
+
+      // 自原本陣列清除
+      Object.keys(dragUserState).forEach(k => {
+        dragUserState[k] = dragUserState[k].filter(id => id !== itemId);
+      });
+
+      // 加進新類別
+      dragUserState[catKey].push(itemId);
+
+      // 移動 DOM
+      const targetZone = document.querySelector(`.dropzone[data-category="${catKey}"] .zone-chips`);
+      targetZone.appendChild(chip);
+
+      // 更新數字提示
+      document.querySelectorAll('.dropzone').forEach(z => {
+        const k = z.dataset.category;
+        z.querySelector('.count-hint').textContent = `${dragUserState[k].length} 項`;
+      });
+    }
+
+    function evaluateDragMatching(q) {
+      if (isAnswered) return;
+      // 檢查是否所有項目皆已分配
+      let totalPlaced = 0;
+      let allCorrect = true;
+
+      q.items.forEach(item => {
+        const placedCat = Object.keys(dragUserState).find(k => dragUserState[k].includes(item.id));
+        if (placedCat) {
+          totalPlaced++;
+          if (placedCat !== item.matchKey) allCorrect = false;
+        } else {
+          allCorrect = false;
+        }
+      });
+
+      if (totalPlaced < q.items.length) {
+        showTemporaryToast("請將所有卡片都拖曳分類到框框中喔！");
+        return;
+      }
+
+      submitAnswer(allCorrect, allCorrect ? "全數分類正確" : "部分分類錯誤");
+    }
+
+    // --- 題型 4: 拖曳挑選 (冰沙實驗材料) ---
+    function renderDragSelect(q) {
+      const selectedIds = new Set();
+      const wrap = document.createElement('div');
+      wrap.className = "flex flex-col gap-4";
+
+      const hint = document.createElement('div');
+      hint.className = "text-xs text-[#736B5E] bg-[#FAF8F3] p-2.5 rounded-lg border border-[#E4DDD0]";
+      hint.innerHTML = `💡 請點選或拖曳 <strong>${q.targetCount} 種</strong> 進行實驗的正確材料加入實驗籃中：`;
+
+      const basket = document.createElement('div');
+      basket.className = "p-4 bg-white rounded-xl border-2 border-dashed border-[#7E9A82] min-h-[90px] flex flex-wrap gap-2 items-center justify-center";
+      basket.innerHTML = `<span id="basket-placeholder" class="text-xs text-[#8C9E8F]">🧺 實驗籃（請點擊下方材料加入）</span>`;
+
+      const grid = document.createElement('div');
+      grid.className = "grid grid-cols-2 sm:grid-cols-3 gap-2.5";
+
+      q.options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = "p-3 bg-[#FAF8F5] border border-[#DDD4C5] rounded-xl text-xs sm:text-sm font-semibold text-[#484236] hover:bg-[#F0EAE0] transition-all active:scale-95 text-center";
+        btn.textContent = opt.text;
+        btn.onclick = () => {
+          playSound('click');
+          if (selectedIds.has(opt.id)) {
+            selectedIds.delete(opt.id);
+            btn.classList.remove('bg-[#E4ECE3]', 'border-[#7E9A82]', 'text-[#3E5C3B]');
+          } else {
+            if (selectedIds.size >= q.targetCount) {
+              showTemporaryToast(`最多只能挑選 ${q.targetCount} 種材料喔！`);
+              return;
+            }
+            selectedIds.add(opt.id);
+            btn.classList.add('bg-[#E4ECE3]', 'border-[#7E9A82]', 'text-[#3E5C3B]');
+          }
+          updateBasket();
+        };
+        grid.appendChild(btn);
+      });
+
+      function updateBasket() {
+        basket.innerHTML = '';
+        if (selectedIds.size === 0) {
+          basket.innerHTML = `<span class="text-xs text-[#8C9E8F]">🧺 實驗籃（已選 0 / ${q.targetCount}）</span>`;
+          return;
+        }
+        selectedIds.forEach(id => {
+          const item = q.options.find(o => o.id === id);
+          const tag = document.createElement('span');
+          tag.className = "px-2.5 py-1 bg-[#E4ECE3] text-[#3E5C3B] rounded-lg text-xs font-bold border border-[#B8D1B6]";
+          tag.textContent = item.text;
+          basket.appendChild(tag);
+        });
+      }
+
+      const submitBtn = document.createElement('button');
+      submitBtn.className = "w-full py-2.5 bg-[#677C6B] hover:bg-[#566A59] text-white font-bold rounded-xl text-sm transition-all";
+      submitBtn.textContent = `確認選取 (${selectedIds.size}/${q.targetCount}) ✓`;
+      submitBtn.onclick = () => {
+        if (selectedIds.size < q.targetCount) {
+          showTemporaryToast(`請選滿 ${q.targetCount} 種實驗材料！`);
+          return;
+        }
+        playSound('click');
+        let isCorrect = true;
+        selectedIds.forEach(id => {
+          const opt = q.options.find(o => o.id === id);
+          if (!opt.isCorrect) isCorrect = false;
+        });
+        const chosenNames = Array.from(selectedIds).map(id => q.options.find(o => o.id === id).text).join('、');
+        submitAnswer(isCorrect, chosenNames);
+      };
+
+      wrap.appendChild(hint);
+      wrap.appendChild(basket);
+      wrap.appendChild(grid);
+      wrap.appendChild(submitBtn);
+      elInteractiveContent.appendChild(wrap);
+    }
+
+    // --- 題型 5: 連連看互動題 (Line Connecting) ---
+    function renderLineConnecting(q) {
+      connectUserLines = [];
+      connectSelectedLeft = null;
+
+      const wrap = document.createElement('div');
+      wrap.className = "relative flex flex-col gap-4";
+
+      const lineCanvasWrap = document.createElement('div');
+      lineCanvasWrap.className = "relative flex justify-between gap-4 py-2";
+
+      // 連線 SVG 圖層
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("class", "absolute inset-0 w-full h-full pointer-events-none z-10");
+      svg.id = "connecting-svg";
+      lineCanvasWrap.appendChild(svg);
+
+      // 左側欄
+      const leftCol = document.createElement('div');
+      leftCol.className = "flex flex-col gap-2.5 w-1/2 z-20";
+
+      q.leftItems.forEach(item => {
+        const row = document.createElement('div');
+        row.id = `left-${item.id}`;
+        row.className = "connect-left-row p-2.5 bg-[#FAF8F5] border border-[#DDD5C7] rounded-xl text-xs sm:text-sm font-medium text-[#464137] flex items-center justify-between cursor-pointer hover:border-[#677C6B] transition-all";
+        row.innerHTML = `<span>${item.text}</span><span class="w-3.5 h-3.5 rounded-full bg-[#D5CBBC] border border-white connect-dot" data-side="left" data-id="${item.id}"></span>`;
+        row.onclick = () => handleSelectLeft(item.id);
+        leftCol.appendChild(row);
+      });
+
+      // 右側欄
+      const rightCol = document.createElement('div');
+      rightCol.className = "flex flex-col justify-around gap-2.5 w-5/12 z-20";
+
+      q.rightItems.forEach(p => {
+        const row = document.createElement('div');
+        row.id = `right-${p.id}`;
+        row.className = "connect-right-row p-2.5 bg-[#F2EDE4] border border-[#DDD4C5] rounded-xl text-xs sm:text-sm font-bold text-[#574E41] flex items-center justify-between cursor-pointer hover:border-[#677C6B] transition-all";
+        row.innerHTML = `<span class="w-3.5 h-3.5 rounded-full bg-[#677C6B] border border-white connect-dot" data-side="right" data-id="${p.id}"></span><span class="ml-2">${p.text}</span>`;
+        row.onclick = () => handleSelectRight(p.id);
+        rightCol.appendChild(row);
+      });
+
+      lineCanvasWrap.appendChild(leftCol);
+      lineCanvasWrap.appendChild(rightCol);
+
+      function handleSelectLeft(leftId) {
+        playSound('click');
+        connectSelectedLeft = leftId;
+        document.querySelectorAll('.connect-left-row').forEach(r => r.classList.remove('ring-2', 'ring-[#677C6B]'));
+        document.getElementById(`left-${leftId}`).classList.add('ring-2', 'ring-[#677C6B]');
+      }
+
+      function handleSelectRight(rightId) {
+        if (!connectSelectedLeft) {
+          showTemporaryToast("請先點選左側題目，再點右側原理連線！");
+          return;
+        }
+        playSound('click');
+        // 移除原本左側連線
+        connectUserLines = connectUserLines.filter(l => l.left !== connectSelectedLeft);
+        connectUserLines.push({ left: connectSelectedLeft, right: rightId });
+
+        document.querySelectorAll('.connect-left-row').forEach(r => r.classList.remove('ring-2', 'ring-[#677C6B]'));
+        connectSelectedLeft = null;
+        redrawConnectingLines();
+      }
+
+      function redrawConnectingLines() {
+        svg.innerHTML = '';
+        const rectWrap = lineCanvasWrap.getBoundingClientRect();
+
+        connectUserLines.forEach(line => {
+          const elL = document.querySelector(`#left-${line.left} .connect-dot`);
+          const elR = document.querySelector(`#right-${line.right} .connect-dot`);
+          if (!elL || !elR) return;
+
+          const rectL = elL.getBoundingClientRect();
+          const rectR = elR.getBoundingClientRect();
+
+          const x1 = rectL.left + rectL.width / 2 - rectWrap.left;
+          const y1 = rectL.top + rectL.height / 2 - rectWrap.top;
+          const x2 = rectR.left + rectR.width / 2 - rectWrap.left;
+          const y2 = rectR.top + rectR.height / 2 - rectWrap.top;
+
+          const path = document.createElementNS("http://www.w3.org/2000/svg", "line");
+          path.setAttribute("x1", x1);
+          path.setAttribute("y1", y1);
+          path.setAttribute("x2", x2);
+          path.setAttribute("y2", y2);
+          path.setAttribute("stroke", "#677C6B");
+          path.setAttribute("stroke-width", "3");
+          path.setAttribute("stroke-linecap", "round");
+          svg.appendChild(path);
+        });
+      }
+
+      window.addEventListener('resize', redrawConnectingLines);
+
+      // 連線提交按鈕
+      const submitBtn = document.createElement('button');
+      submitBtn.className = "w-full py-2.5 bg-[#677C6B] hover:bg-[#566A59] text-white font-bold rounded-xl text-sm transition-all";
+      submitBtn.textContent = "確認連線送出 ✓";
+      submitBtn.onclick = () => {
+        if (connectUserLines.length < q.leftItems.length) {
+          showTemporaryToast(`還有題目未連線喔！已完成 ${connectUserLines.length}/${q.leftItems.length}`);
+          return;
+        }
+        playSound('click');
+        let isCorrect = true;
+        q.leftItems.forEach(item => {
+          const userLink = connectUserLines.find(l => l.left === item.id);
+          if (!userLink || userLink.right !== item.targetPrinciple) {
+            isCorrect = false;
+          }
+        });
+        window.removeEventListener('resize', redrawConnectingLines);
+        submitAnswer(isCorrect, isCorrect ? "所有生活原理連線正確" : "部分連線錯誤");
+      };
+
+      wrap.appendChild(lineCanvasWrap);
+      wrap.appendChild(submitBtn);
+      elInteractiveContent.appendChild(wrap);
+    }
+
+    // --- 題型 6: 連通管原理畫水面 / 高度互動調整題 ---
+    function renderWaterLevelInteractive(q) {
+      currentWaterB = 25; // 初始給一個錯誤高度，讓學生滑動
+      const wrap = document.createElement('div');
+      wrap.className = "flex flex-col gap-4";
+
+      const displayBox = document.createElement('div');
+      displayBox.className = "p-4 bg-[#FBF9F6] border border-[#DCD3C5] rounded-xl flex flex-col items-center";
+
+      // 容器可視化 (SVG 繪製連通管)
+      displayBox.innerHTML = `
+        <div class="w-full flex justify-around text-xs font-bold text-[#635C50] mb-2">
+          <span>${q.descriptionA}</span>
+          <span class="text-[#677C6B]">${q.descriptionB}</span>
+        </div>
+        <div class="relative w-full max-w-[340px] h-48 bg-white border border-[#E3DBD0] rounded-xl overflow-hidden p-2 flex justify-between items-end">
+          <!-- 容器 A (基準) -->
+          <div class="w-24 h-40 border-2 border-[#544D41] border-t-0 relative rounded-b-md flex flex-col justify-end bg-[#F4F8F5]">
+            <div id="vessel-a-water" class="w-full bg-[#83A9B8] transition-all relative border-t-2 border-[#4A7A8C]" style="height: ${q.vesselA_level}%">
+              <span class="absolute -top-5 left-1 text-[10px] font-bold text-[#355B69]">${q.vesselA_level}%</span>
+            </div>
+          </div>
+
+          <!-- 底部相通管道 -->
+          <div class="absolute bottom-2 left-24 right-24 h-5 bg-[#83A9B8] border-t-2 border-b-2 border-[#544D41]"></div>
+
+          <!-- 容器 B (互動調節端) -->
+          <div class="w-24 h-40 border-2 border-[#544D41] border-t-0 relative rounded-b-md flex flex-col justify-end bg-[#F4F8F5]">
+            <div id="vessel-b-water" class="w-full bg-[#759CAE] transition-all relative border-t-2 border-[#386778]" style="height: ${currentWaterB}%">
+              <span id="vessel-b-tag" class="absolute -top-5 left-1 text-[10px] font-bold text-[#274F5E]">${currentWaterB}%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 水位調整滑桿 (Slider) -->
+        <div class="w-full max-w-[340px] mt-4">
+          <div class="flex justify-between text-xs text-[#736B5E] mb-1">
+            <span>調整容器 B 水位刻度：</span>
+            <span id="slider-val-label" class="font-bold text-[#455A48]">${currentWaterB}%</span>
+          </div>
+          <input type="range" id="water-level-slider" min="5" max="95" value="${currentWaterB}" 
+            class="w-full h-2 bg-[#E0D7CC] rounded-lg appearance-none cursor-pointer accent-[#677C6B]">
+        </div>
+      `;
+
+      wrap.appendChild(displayBox);
+
+      // 綁定 Slider 事件
+      const slider = displayBox.querySelector('#water-level-slider');
+      const valLabel = displayBox.querySelector('#slider-val-label');
+      const waterB = displayBox.querySelector('#vessel-b-water');
+      const tagB = displayBox.querySelector('#vessel-b-tag');
+
+      slider.addEventListener('input', (e) => {
+        currentWaterB = parseInt(e.target.value, 10);
+        valLabel.textContent = `${currentWaterB}%`;
+        waterB.style.height = `${currentWaterB}%`;
+        tagB.textContent = `${currentWaterB}%`;
+      });
+
+      const submitBtn = document.createElement('button');
+      submitBtn.className = "w-full py-2.5 bg-[#677C6B] hover:bg-[#566A59] text-white font-bold rounded-xl text-sm transition-all";
+      submitBtn.textContent = "確認此水位靜止平衡 ✓";
+      submitBtn.onclick = () => {
+        playSound('click');
+        const diff = Math.abs(currentWaterB - q.target_level);
+        const isCorrect = (diff <= q.tolerance);
+        submitAnswer(isCorrect, `設定水面刻度為 ${currentWaterB}%`);
+      };
+
+      wrap.appendChild(submitBtn);
+      elInteractiveContent.appendChild(wrap);
+    }
+
+    /* =========================================================
+       9. 作答送出與判定通用函式
+       ========================================================= */
+    function submitAnswer(isCorrect, chosenDescription) {
+      if (isAnswered) return;
+      isAnswered = true;
+      clearInterval(timer);
+
+      const q = currentQuestions[currentIndex];
+      handleEvaluationResult(isCorrect, q.explanation, chosenDescription);
+    }
+
+    function handleEvaluationResult(isCorrect, explanation, userChoice) {
+      const q = currentQuestions[currentIndex];
+
+      // 紀錄回答
+      userAnswersLog.push({
+        question: q,
+        userChoice: userChoice,
+        isCorrect: isCorrect
+      });
+
+      // 禁用題目按鈕
+      disableInteractiveElements();
+
+      if (isCorrect) {
+        score += 4; // 每題 4 分
+        updateScoreDisplay();
+        updateCombo(true);
+        playSound('correct');
+        renderFeedbackBox(true, explanation);
+      } else {
+        hp--;
+        updateHpDisplay();
+        updateCombo(false);
+        playSound('wrong');
+        renderFeedbackBox(false, explanation);
+
+        if (hp <= 0) {
+          setTimeout(() => endGame(true), 1600);
+          return;
+        }
+      }
+    }
+
+    function disableInteractiveElements() {
+      const allBtns = elInteractiveContent.querySelectorAll('button, input');
+      allBtns.forEach(b => b.disabled = true);
+    }
+
+    function renderFeedbackBox(isCorrect, explanation) {
+      elFeedbackPanel.classList.remove('hidden');
+      if (isCorrect) {
+        elFeedbackPanel.classList.add('bg-[#F0F6F0]', 'border-[#BFD5BF]');
+        elFeedbackStatus.className = "flex items-center space-x-2 font-bold mb-1.5 text-sm sm:text-base text-[#416840]";
+        elFeedbackStatus.innerHTML = `
+          <svg class="w-5 h-5 text-[#548452]" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+          <span>答對了！太厲害了 (+4 分)</span>
+        `;
+      } else {
+        elFeedbackPanel.classList.add('bg-[#FCF2F1]', 'border-[#E0BDBB]');
+        elFeedbackStatus.className = "flex items-center space-x-2 font-bold mb-1.5 text-sm sm:text-base text-[#8C4341]";
+        elFeedbackStatus.innerHTML = `
+          <svg class="w-5 h-5 text-[#A34E4C]" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path></svg>
+          <span>答錯了！扣除 1 顆愛心</span>
+        `;
+      }
+
+      elFeedbackExplanation.innerHTML = `<strong>詳細解析：</strong>${explanation}`;
+      elBtnNext.textContent = (currentIndex === currentQuestions.length - 1) ? "查看成績結算 ➔" : "下一題 ➔";
+    }
+
+    elBtnNext.addEventListener('click', () => {
+      currentIndex++;
+      if (currentIndex < currentQuestions.length) {
+        loadQuestion(currentIndex);
+      } else {
+        endGame(false);
+      }
+    });
+
+    /* =========================================================
+       10. 遊戲結算與彩帶動畫
+       ========================================================= */
+    function endGame(isDead = false) {
+      clearInterval(timer);
+      elQuizScreen.classList.add('hidden');
+      elResultScreen.classList.remove('hidden');
+
+      const durationSec = Math.round((Date.now() - startTime) / 1000);
+      const m = Math.floor(durationSec / 60);
+      const s = durationSec % 60;
+      const formattedTime = `${m}分${s}秒`;
+
+      const answeredCount = userAnswersLog.length;
+      const correctCount = userAnswersLog.filter(log => log.isCorrect).length;
+      const accuracy = answeredCount > 0 ? Math.round((correctCount / answeredCount) * 100) : 0;
+
+      document.getElementById('final-score').textContent = score;
+      document.getElementById('final-accuracy').textContent = `${accuracy}%`;
+      document.getElementById('final-max-combo').textContent = maxCombo;
+      document.getElementById('final-duration').textContent = formattedTime;
+
+      const titleEl = document.getElementById('result-title');
+      const badgeIconEl = document.getElementById('result-badge-icon');
+
+      if (isDead) {
+        titleEl.textContent = "愛心耗盡，挑戰中斷！";
+        badgeIconEl.innerHTML = "💧";
+        badgeIconEl.className = "w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center text-3xl bg-[#F4E9E8] text-[#8C4F4F]";
+        elPerfectBanner.classList.add('hidden');
+      } else if (score === 100) {
+        titleEl.textContent = "完美通關！榮獲 100 分！";
+        badgeIconEl.innerHTML = "👑";
+        badgeIconEl.className = "w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center text-3xl bg-[#FEF6E4] text-[#B88728]";
+        elPerfectBanner.classList.remove('hidden');
+        playSound('celebrate');
+        launchConfetti();
+      } else if (score >= 80) {
+        titleEl.textContent = "優秀表現！自然小博士！";
+        badgeIconEl.innerHTML = "🌟";
+        badgeIconEl.className = "w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center text-3xl bg-[#EAF0EB] text-[#557A55]";
+        elPerfectBanner.classList.add('hidden');
+      } else {
+        titleEl.textContent = "闖關完成！多練習會更厲害！";
+        badgeIconEl.innerHTML = "📘";
+        badgeIconEl.className = "w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center text-3xl bg-[#F1EDE5] text-[#7A7061]";
+        elPerfectBanner.classList.add('hidden');
+      }
+
+      renderReviewList(false);
+    }
+
+    function launchConfetti() {
+      if (typeof confetti === 'function') {
+        const duration = 3.5 * 1000;
+        const animationEnd = Date.now() + duration;
+        const interval = setInterval(function() {
+          const timeLeft = animationEnd - Date.now();
+          if (timeLeft <= 0) return clearInterval(interval);
+          confetti({ startVelocity: 30, spread: 360, ticks: 60, zIndex: 100, origin: { x: Math.random() * 0.4 + 0.1, y: Math.random() * 0.5 } });
+          confetti({ startVelocity: 30, spread: 360, ticks: 60, zIndex: 100, origin: { x: Math.random() * 0.4 + 0.5, y: Math.random() * 0.5 } });
+        }, 250);
+      }
+    }
+
+    /* =========================================================
+       11. 詳細解析檢視與錯題過濾
+       ========================================================= */
+    let isFilterOnlyMistakes = false;
+
+    function renderReviewList(onlyMistakes = false) {
+      elReviewList.innerHTML = '';
+      const list = onlyMistakes ? userAnswersLog.filter(l => !l.isCorrect) : userAnswersLog;
+
+      if (list.length === 0) {
+        elReviewList.innerHTML = `
+          <div class="text-center py-8 text-[#8C8476] text-sm">
+            ${onlyMistakes ? '太強了！本次測驗全數正確，無任何錯題！🎉' : '尚無作答紀錄。'}
+          </div>
+        `;
+        return;
+      }
+
+      list.forEach(item => {
+        const card = document.createElement('div');
+        card.className = `p-3.5 rounded-xl border text-sm leading-relaxed ${item.isCorrect ? 'bg-[#FAFCFA] border-[#DCE8DC]' : 'bg-[#FCF7F7] border-[#EAD7D7]'}`;
+        
+        let correctDisplay = "";
+        if (item.question.type === 'tf') {
+          correctDisplay = item.question.correctAnswer ? "⭕ 正確" : "❌ 錯誤";
+        } else if (item.question.type === 'choice') {
+          correctDisplay = `${String.fromCharCode(65 + item.question.correctAnswer)}. ${item.question.options[item.question.correctAnswer]}`;
+        } else if (item.question.type === 'water-level') {
+          correctDisplay = `水位刻度高度 ${item.question.target_level}% (兩端等高)`;
+        } else {
+          correctDisplay = "請參照解題觀念說明";
+        }
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between font-bold mb-1">
+            <span class="text-[#3E4540] text-xs sm:text-sm">[${item.question.typeText}] ${item.question.title}</span>
+            <span class="text-xs px-2 py-0.5 rounded ${item.isCorrect ? 'bg-[#E3EEE2] text-[#4F734D]' : 'bg-[#FBE4E4] text-[#934545]'}">
+              ${item.isCorrect ? '✓ 正確' : '✗ 答錯'}
+            </span>
+          </div>
+          <div class="text-xs text-[#636964] space-y-0.5 mb-2">
+            <div>你的作答：<span class="${item.isCorrect ? 'text-[#4F734D] font-medium' : 'text-[#9C4B4B] font-medium'}">${item.userChoice}</span></div>
+            <div>標準觀念：<span class="text-[#435E42] font-semibold">${correctDisplay}</span></div>
+          </div>
+          <div class="text-xs text-[#525753] bg-white/70 p-2.5 rounded-lg border border-[#E9E2D5]">
+            <strong class="text-[#4D664C]">解題重點：</strong>${item.question.explanation}
+          </div>
+        `;
+        elReviewList.appendChild(card);
+      });
+    }
+
+    elFilterMistakesOnly.addEventListener('click', () => {
+      isFilterOnlyMistakes = !isFilterOnlyMistakes;
+      elFilterMistakesOnly.textContent = isFilterOnlyMistakes ? "顯示所有題目" : "只顯示答錯的題目";
+      elFilterMistakesOnly.className = isFilterOnlyMistakes 
+        ? "text-xs px-3 py-1.5 rounded-lg border border-[#B38D88] bg-[#F2E5E4] font-bold text-[#7A413D]"
+        : "text-xs px-3 py-1.5 rounded-lg border border-[#D5CCC0] bg-[#F5F2EB] hover:bg-[#E9E3D8] font-semibold text-[#5F584E]";
+      renderReviewList(isFilterOnlyMistakes);
+    });
+
+    elBtnToggleMistakes.addEventListener('click', () => {
+      elReviewContainer.scrollIntoView({ behavior: 'smooth' });
+    });
+
+    function showTemporaryToast(msg) {
+      const toast = document.createElement('div');
+      toast.className = "fixed bottom-5 left-1/2 -translate-x-1/2 bg-[#454A46] text-white text-xs px-4 py-2.5 rounded-full shadow-lg z-50 transition-opacity duration-300 pointer-events-none";
+      toast.textContent = msg;
+      document.body.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 2000);
+    }
+
+    /* =========================================================
+       12. 初始綁定
+       ========================================================= */
+    elBtnStart.addEventListener('click', initGame);
+    elBtnRestart.addEventListener('click', initGame);
+    applyMorandiTheme(0);
+  </script>
+</body>
+</html>
